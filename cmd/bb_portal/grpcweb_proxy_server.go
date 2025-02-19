@@ -4,14 +4,22 @@ import (
 	"log"
 	"slices"
 
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/buildbarn/bb-portal/internal/api/grpcweb/actioncacheproxy"
 	"github.com/buildbarn/bb-portal/internal/api/grpcweb/buildqueuestateproxy"
+	"github.com/buildbarn/bb-portal/internal/api/grpcweb/casproxy"
+	"github.com/buildbarn/bb-portal/internal/api/grpcweb/fsacproxy"
+	"github.com/buildbarn/bb-portal/internal/api/grpcweb/isccproxy"
 	"github.com/buildbarn/bb-portal/pkg/proto/configuration/bb_portal"
 	"github.com/buildbarn/bb-remote-execution/pkg/proto/buildqueuestate"
 	"github.com/buildbarn/bb-storage/pkg/auth"
 	bb_grpc "github.com/buildbarn/bb-storage/pkg/grpc"
 	bb_http "github.com/buildbarn/bb-storage/pkg/http"
 	"github.com/buildbarn/bb-storage/pkg/program"
+	"github.com/buildbarn/bb-storage/pkg/proto/fsac"
+	"github.com/buildbarn/bb-storage/pkg/proto/iscc"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"google.golang.org/genproto/googleapis/bytestream"
 	go_grpc "google.golang.org/grpc"
 )
 
@@ -65,6 +73,50 @@ func StartGrpcWebProxyServer(
 		func(grpcServer *go_grpc.Server, grpcClient go_grpc.ClientConnInterface) {
 			c := buildqueuestate.NewBuildQueueStateClient(grpcClient)
 			buildqueuestate.RegisterBuildQueueStateServer(grpcServer, buildqueuestateproxy.NewBuildQueueStateServerImpl(c, instanceNameAuthorizer))
+		},
+	)
+
+	registerAndStartServer(
+		configuration.ActionCacheProxy,
+		siblingsGroup,
+		grpcClientFactory,
+		"ActionCacheProxy",
+		func(grpcServer *go_grpc.Server, grpcClient go_grpc.ClientConnInterface) {
+			c := remoteexecution.NewActionCacheClient(grpcClient)
+			remoteexecution.RegisterActionCacheServer(grpcServer, actioncacheproxy.NewAcctionCacheServerImpl(c, instanceNameAuthorizer))
+		},
+	)
+
+	registerAndStartServer(
+		configuration.ContentAddressableStorageProxy,
+		siblingsGroup,
+		grpcClientFactory,
+		"ContentAddressableStorageProxy",
+		func(grpcServer *go_grpc.Server, grpcClient go_grpc.ClientConnInterface) {
+			c := bytestream.NewByteStreamClient(grpcClient)
+			bytestream.RegisterByteStreamServer(grpcServer, casproxy.NewCasServerImpl(c, instanceNameAuthorizer))
+		},
+	)
+
+	registerAndStartServer(
+		configuration.InitialSizeClassCacheProxy,
+		siblingsGroup,
+		grpcClientFactory,
+		"InitialSizeClassCacheProxy",
+		func(grpcServer *go_grpc.Server, grpcClient go_grpc.ClientConnInterface) {
+			c := iscc.NewInitialSizeClassCacheClient(grpcClient)
+			iscc.RegisterInitialSizeClassCacheServer(grpcServer, isccproxy.NewIsccServerImpl(c, instanceNameAuthorizer))
+		},
+	)
+
+	registerAndStartServer(
+		configuration.FileSystemAccessCacheProxy,
+		siblingsGroup,
+		grpcClientFactory,
+		"FileSystemAccessCacheProxy",
+		func(grpcServer *go_grpc.Server, grpcClient go_grpc.ClientConnInterface) {
+			c := fsac.NewFileSystemAccessCacheClient(grpcClient)
+			fsac.RegisterFileSystemAccessCacheServer(grpcServer, fsacproxy.NewFsacServerImpl(c, instanceNameAuthorizer))
 		},
 	)
 }
