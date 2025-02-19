@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
@@ -32,6 +33,7 @@ import (
 	"github.com/buildbarn/bb-portal/internal/graphql"
 	"github.com/buildbarn/bb-portal/pkg/processing"
 	"github.com/buildbarn/bb-portal/pkg/proto/configuration/bb_portal"
+	"github.com/buildbarn/bb-storage/pkg/auth"
 	"github.com/buildbarn/bb-storage/pkg/global"
 	bb_grpc "github.com/buildbarn/bb-storage/pkg/grpc"
 	bb_http "github.com/buildbarn/bb-storage/pkg/http"
@@ -71,7 +73,7 @@ func main() {
 			return util.StatusWrapf(err, "Failed to read configuration from %s", os.Args[1])
 		}
 
-		lifecycleState, _, err := global.ApplyConfiguration(configuration.Global)
+		lifecycleState, grpcClientFactory, err := global.ApplyConfiguration(configuration.Global)
 		if err != nil {
 			return util.StatusWrap(err, "Failed to apply global configuration options")
 		}
@@ -117,6 +119,11 @@ func main() {
 		defer watcher.Close()
 		runWatcher(watcher, dbClient, *bepFolder, blobArchiver)
 
+		instanceNameAuthorizer, err := auth.DefaultAuthorizerFactory.NewAuthorizerFromConfiguration(configuration.InstanceNameAuthorizer)
+		if err != nil {
+			log.Fatalf("Failed to create InstanceNameAuthorizer: %v", err)
+		}
+
 		router := mux.NewRouter()
 		newPortalService(blobArchiver, dbClient, router)
 		bb_http.NewServersFromConfigurationAndServe(
@@ -134,6 +141,8 @@ func main() {
 		); err != nil {
 			return util.StatusWrap(err, "gRPC server failure")
 		}
+
+		StartGrpcWebProxyServer(&configuration, instanceNameAuthorizer, siblingsGroup, grpcClientFactory)
 
 		lifecycleState.MarkReadyAndWait(siblingsGroup)
 		return nil
