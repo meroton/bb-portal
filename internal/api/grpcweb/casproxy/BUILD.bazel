@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "casproxy",
+    srcs = ["server.go"],
+    importpath = "github.com/buildbarn/bb-portal/internal/api/grpcweb/casproxy",
+    visibility = ["//:__subpackages__"],
+    deps = ["@org_golang_google_genproto_googleapis_bytestream//:bytestream"],
+)
