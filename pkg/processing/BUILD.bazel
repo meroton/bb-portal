@@ -24,7 +24,6 @@ go_library(
         "//ent/gen/ent/testsummary",
         "//pkg/summary",
         "//pkg/summary/detectors",
-        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_google_uuid//:uuid",
     ],
 )
