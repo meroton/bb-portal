@@ -25,7 +25,7 @@ index 89861ab..340ac33 100644
              if [ -d pkg/proto ]; then
                find . bazel-bin/pkg/proto -name '*.pb.go' -delete || true
                bazel build $(bazel query --output=label 'kind("go_proto_library", //...)')
-+              third_party/bazel/scripts/generate-via-bazel.sh
++              third_party/bazel/download_protofiles.sh
                find bazel-bin/pkg/proto -name '*.pb.go' | while read f; do
                  cat $f > $(echo $f | sed -e 's|.*/pkg/proto/|pkg/proto/|')
                done
