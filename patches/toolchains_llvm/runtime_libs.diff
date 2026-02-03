@@ -1,0 +1,68 @@
+diff --git toolchain/BUILD.llvm_repo.tpl toolchain/BUILD.llvm_repo.tpl
+index 5b04bd6..eb6ecd9 100644
+--- toolchain/BUILD.llvm_repo.tpl
++++ toolchain/BUILD.llvm_repo.tpl
+@@ -42,7 +42,7 @@ filegroup(
+     srcs = [
+         "bin/ld.lld",
+         "bin/ld64.lld",
+-    ] + glob(["bin/wasm-ld"], allow_empty = True),
++    ] + glob(["bin/wasm-ld", "runtime_libs/**"], allow_empty = True),
+ )
+ 
+ filegroup(
+diff --git toolchain/cc_wrapper.sh.tpl toolchain/cc_wrapper.sh.tpl
+index f08eef4..e51563f 100644
+--- toolchain/cc_wrapper.sh.tpl
++++ toolchain/cc_wrapper.sh.tpl
+@@ -90,6 +90,15 @@ if [[ ! -f ${toolchain_path_prefix}bin/clang ]]; then
+   exit 5
+ fi
+ 
++# Add runtime libs to our preload path.
++RUNTIME_LIBS_PATH="${toolchain_path_prefix}runtime_libs/"
++if [[ -d "${RUNTIME_LIBS_PATH}" ]]; then
++    # Prepend to LD_LIBRARY_PATH to ensure our hermetic libs are found
++    # first. The ${LD_LIBRARY_PATH:+:...} syntax only adds the colon if
++    # the variable is already set.
++    export LD_LIBRARY_PATH="${RUNTIME_LIBS_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
++fi
++
+ OUTPUT=
+ 
+ function parse_option() {
+diff --git toolchain/internal/repo.bzl toolchain/internal/repo.bzl
+index 99e2ee3..ec60307 100644
+--- toolchain/internal/repo.bzl
++++ toolchain/internal/repo.bzl
+@@ -64,6 +64,15 @@ llvm_repo_attrs.update({
+                "supported on the OS/arch. Further, requirements can be provided, e.g. " +
+                "`latest:>=17.0.4,!=19.0.7`."),
+     ),
++    "exec_libs_url": attr.string(
++        mandatory = False,
++    ),
++    "exec_libs_sha256": attr.string(
++        mandatory = False,
++    ),
++    "exec_libs_strip_prefix": attr.string(
++        mandatory = False,
++    ),
+     "urls": attr.string_list_dict(
+         mandatory = False,
+         doc = ("URLs to LLVM pre-built binary distribution archives, keyed by host OS " +
+@@ -435,6 +444,14 @@ def llvm_repo_impl(rctx):
+         executable = False,
+     )
+ 
++    if rctx.attr.exec_libs_url:
++        rctx.download_and_extract(
++            url = rctx.attr.exec_libs_url,
++            sha256 = rctx.attr.exec_libs_sha256,
++            stripPrefix = rctx.attr.exec_libs_strip_prefix,
++            output = "runtime_libs",
++        )
++
+     updated_attrs = _download_llvm(rctx)
+ 
+     # We try to avoid patches to the downloaded repo so that it is easier for

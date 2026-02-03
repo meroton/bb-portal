@@ -9,6 +9,13 @@
                "uses": "actions/checkout@v4"
             },
             {
+               "env": {
+                  "BAZEL_REMOTE_EXECUTION_API_TOKEN": "${{ secrets.BAZEL_REMOTE_EXECUTION_API_TOKEN }}"
+               },
+               "name": "Configure Remote Execution",
+               "run": " echo \"${BAZEL_REMOTE_EXECUTION_API_TOKEN}\"  > ./.rbe_api_token"
+            },
+            {
                "name": "Installing Bazel",
                "run": "v=$(cat .bazelversion)\nmkdir -p ~/bin\ncurl -L https://github.com/bazelbuild/bazel/releases/download/${v}/bazel-${v}-${{matrix.host.bazel_os}}-${{matrix.host.bazel_arch}} > ~/bin/bazel\nchmod +x ~/bin/bazel\necho ~/bin >> ${GITHUB_PATH}\n",
                "shell": "bash"
@@ -19,14 +26,9 @@
                "run": "bazel test --test_output=errors //..."
             },
             {
-               "if": "matrix.host.platform_name == 'linux_arm64'",
-               "name": "linux_arm64: build and test",
-               "run": "bazel test --test_output=errors //..."
-            },
-            {
                "if": "matrix.host.cross_compile",
                "name": "Cross-platform builds",
-               "run": "bazel build --platforms=@com_github_buildbarn_bb_storage//tools/platforms:darwin_amd64,@com_github_buildbarn_bb_storage//tools/platforms:darwin_arm64,@com_github_buildbarn_bb_storage//tools/platforms:freebsd_amd64,@com_github_buildbarn_bb_storage//tools/platforms:windows_amd64 --@bazel_tools//tools/test:incompatible_use_default_test_toolchain=False //..."
+               "run": "bazel build --platforms=@com_github_buildbarn_bb_storage//tools/platforms:darwin_amd64,@com_github_buildbarn_bb_storage//tools/platforms:darwin_arm64,@com_github_buildbarn_bb_storage//tools/platforms:freebsd_amd64,@com_github_buildbarn_bb_storage//tools/platforms:linux_arm64 --@bazel_tools//tools/test:incompatible_use_default_test_toolchain=False //..."
             }
          ],
          "strategy": {
@@ -64,6 +66,13 @@
             {
                "name": "Check out source code",
                "uses": "actions/checkout@v4"
+            },
+            {
+               "env": {
+                  "BAZEL_REMOTE_EXECUTION_API_TOKEN": "${{ secrets.BAZEL_REMOTE_EXECUTION_API_TOKEN }}"
+               },
+               "name": "Configure Remote Execution",
+               "run": " echo \"${BAZEL_REMOTE_EXECUTION_API_TOKEN}\"  > ./.rbe_api_token"
             },
             {
                "name": "Installing Bazel",

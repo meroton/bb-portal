@@ -1,3 +1,3 @@
-build --incompatible_strict_action_env
+import %workspace%/../../.bazelrc.common
 
-test --test_output=errors
+common --remote_download_regex=".*\.proto$"

@@ -16,6 +16,13 @@
                "run": "echo \"${GITHUB_TOKEN}\" | docker login ghcr.io -u $ --password-stdin"
             },
             {
+               "env": {
+                  "BAZEL_REMOTE_EXECUTION_API_TOKEN": "${{ secrets.BAZEL_REMOTE_EXECUTION_API_TOKEN }}"
+               },
+               "name": "Configure Remote Execution",
+               "run": " echo \"${BAZEL_REMOTE_EXECUTION_API_TOKEN}\"  > ./.rbe_api_token"
+            },
+            {
                "name": "Installing Bazel",
                "run": "v=$(cat .bazelversion)\nmkdir -p ~/bin\ncurl -L https://github.com/bazelbuild/bazel/releases/download/${v}/bazel-${v}-linux-arm64 > ~/bin/bazel\nchmod +x ~/bin/bazel\necho ~/bin >> ${GITHUB_PATH}\n",
                "shell": "bash"

@@ -14,6 +14,7 @@ http_archive(
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "grpc-java", version = "1.78.0")
 bazel_dep(name = "grpc", version = "1.76.0.bcr.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_cc", version = "0.2.14")
 bazel_dep(name = "rules_java", version = "9.0.3")
@@ -21,6 +22,65 @@ bazel_dep(name = "rules_jvm_external", version = "6.7")
 bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 use_repo(maven, "maven")
+
+single_version_override(
+    module_name = "toolchains_llvm",
+    patches = [
+        "//:patches/toolchains_llvm/non-root.diff",
+        "//:patches/toolchains_llvm/runtime_libs.diff",
+    ],
+)
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(
+    name = "llvm_toolchain",
+    exec_libs_sha256 = "ab7c6cf17f3dff0967332f5d6b3b0dbd26abadfe5c3a171494ceb7f2125e4969",
+    exec_libs_strip_prefix = "runtime_libs/",
+    # Add any libraries required for the runtime. These are libraries required
+    # to run the clang binaries themselves but are otherwise not used in as
+    # inputs to the build.
+    exec_libs_url = "https://github.com/meroton/llvm_runtime_libraries/releases/download/v20.1.2-alpha/runtime-libs-llvm-20.1.2-linux-x86_64.tar.zst",
+    exec_os = "linux",
+    # Use any llvm version, independently of the target sysroot. Newer is
+    # usually better.
+    llvm_version = "20.1.2",
+    stdlib = {
+        "linux-x86_64": "libc++",
+        "linux-arm64": "libc++",
+    },
+)
+
+# Use any sysroot which contains all required link time headers and libraries.
+# Typically you target as old as a sysroot as feasible.
+http_archive(
+    name = "sysroot_linux_x86_64",
+    build_file_content = """filegroup(name = "sysroot", srcs = glob(["**/*"]), visibility = ["//visibility:public"])""",
+    sha256 = "77f5a2e793607139c8ad9607772e7862b1711430a9a1b2926c16128c3355e987",
+    urls = ["https://github.com/scasagrande/toolchains_llvm_sysroot/releases/download/linux-sysroot-4_18-2_28-10_3_0/linux-sysroot-x86_64.tar.zst"],
+)
+
+http_archive(
+    name = "sysroot_linux_aarch64",
+    build_file_content = """filegroup(name = "sysroot", srcs = glob(["**/*"]), visibility = ["//visibility:public"])""",
+    sha256 = "8462b3c1bbb7d6e6b5ec48e3b64d59671155b0a522a28e3bcabef67bced3e008",
+    urls = ["https://github.com/scasagrande/toolchains_llvm_sysroot/releases/download/linux-sysroot-4_18-2_28-10_3_0/linux-sysroot-aarch64.tar.zst"],
+)
+
+# Associate the sysroot with the above toolchain.
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@sysroot_linux_x86_64//:sysroot",
+    targets = ["linux-x86_64"],
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@sysroot_linux_aarch64//:sysroot",
+    targets = ["linux-aarch64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all", dev_dependency = True)

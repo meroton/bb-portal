@@ -1,0 +1,1 @@
+../../../tools/bazel-credential-helper.py

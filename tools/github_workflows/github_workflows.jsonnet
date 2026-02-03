@@ -29,7 +29,7 @@ local cross_targets = [
   "darwin_amd64",
   "darwin_arm64",
   "freebsd_amd64",
-  "windows_amd64"
+  "linux_arm64",
 ];
 
 // A single step that builds for all target cross platforms
@@ -78,19 +78,30 @@ local docker_credentials_step = {
   },
 };
 
+// Meroton custom steps
+local runs_on_step = { uses: "runs-on/action@v2", with: { metrics: "cpu" }};
+local configure_remote_execution = {
+  name: "Configure Remote Execution",
+  run: " echo \"${BAZEL_REMOTE_EXECUTION_API_TOKEN}\"  > ./.rbe_api_token",
+  env: {
+    BAZEL_REMOTE_EXECUTION_API_TOKEN: "${{ secrets.BAZEL_REMOTE_EXECUTION_API_TOKEN }}",
+  },
+};
+
 // Shared build steps list
 local build_steps = [
   checkout_step,
+  configure_remote_execution,
   install_bazel('matrix'),
   // Native Tests
   bazel_step("linux_amd64", "matrix.host.platform_name == 'linux_amd64'"),
-  bazel_step("linux_arm64", "matrix.host.platform_name == 'linux_arm64'"),
   // Cross Builds
   cross_build_step,
 ];
 
 local lint_steps = [
   checkout_step,
+  configure_remote_execution,
   install_bazel('linux', 'arm64'),
   { name: "Reformat", run: "bazel run //tools:reformat" },
   { name: "Test style conformance", run: "git add . && git diff --exit-code HEAD --" },
@@ -133,6 +144,7 @@ local lint_steps = [
         steps: [
           checkout_step,
           docker_credentials_step,
+          configure_remote_execution,
           install_bazel('linux', 'arm64'),
           {
             name: "Build and push backend",

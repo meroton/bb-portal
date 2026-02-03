@@ -1,0 +1,27 @@
+test --test_output=errors
+
+# https://github.com/bazel-contrib/rules_go/issues/3886
+common --@rules_go//go/config:linkmode=pie
+
+common --credential_helper=*.meroton.com=%workspace%/tools/bazel-credential-helper.py
+common --incompatible_strict_action_env
+
+common:rbe-prod --remote_executor=grpcs://rbe.buildbar.meroton.com
+common:rbe-prod --config=rbe
+common:rbe --remote_instance_name=lithe-kod
+common:rbe --remote_download_toplevel
+common:rbe --remote_download_regex=".pb.go$"
+common:rbe --host_platform=//platforms:host
+common:rbe --extra_execution_platforms=//platforms:ubuntu-24-04
+common:rbe --remote_timeout=600s
+common:rbe --jobs=256
+
+common:bes-prod --bes_backend=grpcs://bes.buildbar.meroton.com
+common:bes-prod --bes_results_url=https://buildbar.meroton.com/bazel-invocations/
+common:bes-prod --config=bes
+common:bes --bes_instance_name=lithe-kod
+
+common:ci --config=rbe-prod --config=bes-prod
+
+common:prod --config=rbe-prod --config=bes-prod
+common:stage --config=rbe-stage --config=bes-stage
