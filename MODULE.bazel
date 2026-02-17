@@ -166,7 +166,7 @@ use_repo(
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 llvm.toolchain(
     # TODO: Rename to llvm_toolchain_linux_x86_64 when llvm_toolchain_llvm has become a dev dependency in Buildbarn.
-    name = "llvm_toolchain_llvm",
+    name = "llvm_toolchain",
     exec_arch = "x86_64",
     exec_libs_sha256 = "ab7c6cf17f3dff0967332f5d6b3b0dbd26abadfe5c3a171494ceb7f2125e4969",
     exec_libs_strip_prefix = "runtime_libs/",
